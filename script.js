@@ -109,7 +109,7 @@ async function connectToDevice() {
             filters: [
                 { services: [UART_SERVICE_UUID] }
                 // Alternatively, you can use name filters if your device advertises a specific name
-                // { name: 'YourDeviceName' }
+                // { name: 'AltMonitor' }
             ],
             optionalServices: [UART_SERVICE_UUID]
         });
@@ -152,6 +152,12 @@ function handleNotifications(event) {
     const decoder = new TextDecoder();
     const data = decoder.decode(value);
     
+    // Debug - output raw data bytes to console
+    console.log("Raw BLE data received:");
+    const bytes = new Uint8Array(value.buffer);
+    console.log(Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' '));
+    console.log(`Decoded as text: "${data}"`);
+    
     // Add to log
     addLogEntry(`Data: ${data}`);
     
@@ -161,30 +167,57 @@ function handleNotifications(event) {
 
 // Process the serial data from the device
 function processSerialData(data) {
-    // Check for altitude data format
-    const altitudeMatch = data.match(/Altitude: ([0-9.]+) m, Change: ([0-9.-]+) cm, IMU Motion: ([A-Z]+)/);
-    
-    if (altitudeMatch) {
-        const altitude = parseFloat(altitudeMatch[1]);
-        const change = parseFloat(altitudeMatch[2]);
-        const motion = altitudeMatch[3];
-        
-        // Update UI with the parsed data
-        updateAltitudeDisplay(altitude, change, motion);
-        
-        // Add data point to chart
-        addDataPoint(altitude);
+    // Handle the different data types based on prefix
+    if (data.startsWith("A:")) {
+        // Altitude data
+        const altitude = parseFloat(data.substring(2));
+        if (!isNaN(altitude)) {
+            currentAltitude.textContent = `${altitude.toFixed(2)} m`;
+            addDataPoint(altitude); // Add to chart
+        }
+    } 
+    else if (data.startsWith("C:")) {
+        // Change data
+        const change = parseFloat(data.substring(2));
+        if (!isNaN(change)) {
+            elevationChange.textContent = `${change.toFixed(2)} cm`;
+            
+            // Add classes for styling based on change value
+            if (change > 0) {
+                elevationChange.classList.add('rising');
+                elevationChange.classList.remove('falling');
+                ledRed.classList.add('active');
+                ledGreen.classList.remove('active');
+            } else if (change < 0) {
+                elevationChange.classList.add('falling');
+                elevationChange.classList.remove('rising');
+                ledRed.classList.remove('active');
+                ledGreen.classList.add('active');
+            } else {
+                elevationChange.classList.remove('rising', 'falling');
+                ledRed.classList.remove('active');
+                ledGreen.classList.remove('active');
+            }
+        }
     }
-    
-    // Check for LED status (not included in serial output, but we can simulate based on data)
-    if (altitudeMatch) {
-        const change = parseFloat(altitudeMatch[2]);
-        const motion = altitudeMatch[3];
+    else if (data.startsWith("M:")) {
+        // Motion data
+        const motion = data.substring(2);
+        motionStatus.textContent = motion;
         
-        // Update LEDs based on the data
-        ledRed.classList.toggle('active', motion === 'UP' && change > 0);
-        ledGreen.classList.toggle('active', change < 0);
-        ledBlue.classList.toggle('active', Math.abs(change) < 0.5); // Low change might indicate drift/calibration
+        // Update drift LED based on stability
+        ledBlue.classList.toggle('active', motion === 'DRIFT');
+    }
+    // Fallback for non-prefixed data (original format)
+    else {
+        // Check for altitude data format in the original format
+        const altitudeMatch = data.match(/Altitude: ([0-9.]+)/);
+        
+        if (altitudeMatch) {
+            const altitude = parseFloat(altitudeMatch[1]);
+            currentAltitude.textContent = `${altitude.toFixed(2)} m`;
+            addDataPoint(altitude);
+        }
     }
 }
 
@@ -313,6 +346,18 @@ function clearLog() {
         logContainer.removeChild(logContainer.firstChild);
     }
     addLogEntry('Log cleared.');
+}
+
+// Send a command to the Arduino
+function sendCommand(command) {
+    if (!isConnected || !txCharacteristic) {
+        addLogEntry('Not connected to device', true);
+        return;
+    }
+    
+    const encoder = new TextEncoder();
+    txCharacteristic.writeValue(encoder.encode(command));
+    addLogEntry(`Command sent: ${command}`);
 }
 
 // Initialize on page load

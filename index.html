@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Altitude Monitor</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Altitude Monitor</h1>
+        
+        <div class="connection-panel">
+            <button id="connectBtn" class="btn-primary">Connect to Device</button>
+            <div id="connectionStatus" class="status-indicator">Disconnected</div>
+        </div>
+        
+        <div class="data-panel">
+            <div class="data-card">
+                <div class="card-title">Current Altitude</div>
+                <div id="currentAltitude" class="card-value">-- m</div>
+            </div>
+            
+            <div class="data-card">
+                <div class="card-title">Elevation Change</div>
+                <div id="elevationChange" class="card-value">-- cm</div>
+            </div>
+            
+            <div class="data-card">
+                <div class="card-title">Motion</div>
+                <div id="motionStatus" class="card-value">--</div>
+            </div>
+        </div>
+        
+        <div class="indicator-panel">
+            <div class="led-indicator">
+                <div id="ledRed" class="led led-red"></div>
+                <div class="led-label">Rising</div>
+            </div>
+            <div class="led-indicator">
+                <div id="ledGreen" class="led led-green"></div>
+                <div class="led-label">Falling</div>
+            </div>
+            <div class="led-indicator">
+                <div id="ledBlue" class="led led-blue"></div>
+                <div class="led-label">Drift</div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="altitudeChart"></canvas>
+        </div>
+        
+        <div class="log-panel">
+            <div class="panel-header">
+                <h3>Device Log</h3>
+                <button id="clearLogBtn" class="btn-secondary">Clear</button>
+            </div>
+            <div id="logContainer" class="log-container"></div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
